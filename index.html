@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Downloader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #282c34;
+            color: #fff;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        input[type="text"],
+        button {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #61dafb;
+            color: #282c34;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .song-list {
+            margin-top: 20px;
+            text-align: left;
+            color: #61dafb;
+        }
+
+        .song-item {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Spotify Downloader</h1>
+        <input type="text" id="urlInput" placeholder="Enter Spotify URL (playlist, album, or track)">
+        <button onclick="startDownload()">Start Download</button>
+        <div class="song-list" id="songList" style="display: none;">
+            <h3>Downloading:</h3>
+        </div>
+    </div>
+
+    <script>
+        async function startDownload() {
+            const url = document.getElementById("urlInput").value;
+            if (!url) {
+                alert("Please enter a Spotify URL.");
+                return;
+            }
+
+            document.getElementById("songList").style.display = "block";
+            const songList = document.getElementById("songList");
+
+            try {
+                await fetch("http://127.0.0.1:8000/download", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+
+
+                const interval = setInterval(async () => {
+                    const response = await fetch("http://127.0.0.1:8000/download_progress");
+                    const data = await response.json();
+                    const { current, total, song_name } = data;  // Atualize o backend para incluir `song_name` no retorno
+
+                    const songItem = document.createElement("div");
+                    songItem.className = "song-item";
+                    songItem.innerText = `${current}/${total}: ${song_name}`;
+                    songList.appendChild(songItem);
+
+                    if (current >= total) {
+                        clearInterval(interval);
+                        const completionMessage = document.createElement("p");
+                        completionMessage.innerText = "All downloads complete!";
+                        songList.appendChild(completionMessage);
+                    }
+                }, 1000);
+
+            } catch (error) {
+                alert("An error occurred: " + error.message);
+            }
+        }
+    </script>
+</body>
+
+</html>
