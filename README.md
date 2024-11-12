@@ -1,7 +1,3 @@
-# Download de Música do Spotify
-
-Este projeto permite que você baixe músicas do Spotify utilizando uma API FastAPI e uma interface web simples.
-
 ## Requisitos
 
 - Python 3.7+
@@ -49,25 +45,5 @@ Inicie o servidor FastAPI:
 uvicorn main:app --reload
 ```
 
-# Download de Música do Spotify
-
-## O servidor estará disponível em
-http://127.0.0.1:8000.
-
-## Interface Web
-Abra o arquivo `index.html` em seu navegador para acessar a interface web.
-
-## Endpoints
-
-### POST /download/
-Baixa uma música do Spotify.
-
-#### Parâmetros
-- `id_` (string): O ID da música do Spotify.
-
-#### Exemplo de Requisição
-```bash
-curl -X POST "http://127.0.0.1:8000/download/" -H "Content-Type: application/json" -d '{"id_": "spotify_track_id"}'
-```
 
 
