@@ -1,100 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Downloader</title>
+    <title>Download Música Spotify</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #282c34;
-            color: #fff;
-            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
         }
 
         .container {
-            max-width: 500px;
-            margin: 0 auto;
+            background-color: white;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        input[type="text"],
-        button {
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        input {
             padding: 10px;
-            margin-top: 10px;
-            border-radius: 5px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
         }
 
         button {
-            background-color: #61dafb;
-            color: #282c34;
-            font-weight: bold;
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
 
-        .song-list {
+        button:hover {
+            background-color: #1ed760;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #downloadSection {
+            display: none;
             margin-top: 20px;
-            text-align: left;
-            color: #61dafb;
         }
 
-        .song-item {
-            margin-bottom: 10px;
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: green;
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Spotify Downloader</h1>
-        <input type="text" id="urlInput" placeholder="Enter Spotify URL (playlist, album, or track)">
-        <button onclick="startDownload()">Start Download</button>
-        <div class="song-list" id="songList" style="display: none;">
-            <h3>Downloading:</h3>
+        <h1>Download de Música do Spotify</h1>
+        <div class="input-group">
+            <label for="trackId">ID da Música do Spotify:</label>
+            <input type="text" id="trackId" placeholder="Digite o ID da música do Spotify" />
+            <button onclick="fetchTrack()" id="fetchButton">Buscar Música</button>
         </div>
+
+        <div id="downloadSection">
+            <h2>Música Encontrada</h2>
+            <p id="trackInfo"></p>
+            <button onclick="downloadTrack()" id="downloadButton">Baixar Música</button>
+        </div>
+
+        <p id="message"></p>
     </div>
 
     <script>
-        async function startDownload() {
-            const url = document.getElementById("urlInput").value;
-            if (!url) {
-                alert("Please enter a Spotify URL.");
+        const API_URL = 'http://localhost:8000';
+        let currentBlob = null;
+
+        async function fetchTrack() {
+            const trackId = document.getElementById('trackId').value.trim();
+            const message = document.getElementById('message');
+            const downloadSection = document.getElementById('downloadSection');
+            const fetchButton = document.getElementById('fetchButton');
+
+            if (!trackId) {
+                message.className = 'error';
+                message.textContent = 'Por favor, insira um ID válido';
+                return;
+            }
+            try {
+                fetchButton.disabled = true;
+                message.textContent = 'Buscando música...';
+                message.className = '';
+
+                const response = await fetch(`${API_URL}/download/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id_: trackId })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar a música');
+                }
+
+                const blob = await response.blob();
+                currentBlob = blob;
+
+                downloadSection.style.display = 'block';
+                message.className = 'success';
+                message.textContent = 'Música encontrada! Clique em baixar para fazer o download.';
+
+            } catch (error) {
+                message.className = 'error';
+                message.textContent = `Erro: ${error.message}`;
+                downloadSection.style.display = 'none';
+            } finally {
+                fetchButton.disabled = false;
+            }
+        }
+
+        function downloadTrack() {
+            if (!currentBlob) {
                 return;
             }
 
-            document.getElementById("songList").style.display = "block";
-            const songList = document.getElementById("songList");
-
-            try {
-                await fetch("http://127.0.0.1:8000/download", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url })
-                });
-
-
-                const interval = setInterval(async () => {
-                    const response = await fetch("http://127.0.0.1:8000/download_progress");
-                    const data = await response.json();
-                    const { current, total, song_name } = data;  // Atualize o backend para incluir `song_name` no retorno
-
-                    const songItem = document.createElement("div");
-                    songItem.className = "song-item";
-                    songItem.innerText = `${current}/${total}: ${song_name}`;
-                    songList.appendChild(songItem);
-
-                    if (current >= total) {
-                        clearInterval(interval);
-                        const completionMessage = document.createElement("p");
-                        completionMessage.innerText = "All downloads complete!";
-                        songList.appendChild(completionMessage);
-                    }
-                }, 1000);
-
-            } catch (error) {
-                alert("An error occurred: " + error.message);
-            }
+            const downloadUrl = URL.createObjectURL(currentBlob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'music.mp3';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
         }
     </script>
 </body>
